@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>QuickChat Messenger</title>
+    
+    <!-- PWA Configuration for Android -->
+    <meta name="theme-color" content="#6a11cb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Supabase for Android Compatibility -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/umd/supabase.min.js"></script>
+    
+    <!-- Mobile-friendly touch icons -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/96/000000/chat.png">
+    <link rel="icon" type="image/png" href="https://img.icons8.com/color/96/000000/chat.png">
+    
+    <!-- CSS File -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Roboto Font for Android -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loader" id="loader">
+        <div class="loader-spinner"></div>
+        <div style="margin-top: 15px; font-size: 15px;">Loading QuickChat...</div>
+    </div>
+
+    <!-- Auth Screen -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <div class="app-logo">
+                <div class="logo-icon"><i class="fas fa-comment-dots"></i></div>
+                <div class="logo-text">QuickChat</div>
+            </div>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="showAuthForm('login')">Sign In</div>
+                <div class="auth-tab" onclick="showAuthForm('signup')">Sign Up</div>
+            </div>
+            
+            <!-- Login Form -->
+            <div class="auth-form active" id="loginForm">
+                <div class="alert alert-error" id="loginError"></div>
+                <div class="alert alert-success" id="loginSuccess"></div>
+                
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" id="loginUsername" placeholder="Enter username" value="Sun Day">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="Enter password" value="SunDay@chatting!01234">
+                </div>
+                
+                <button class="btn" onclick="handleLogin()" id="loginBtn">
+                    <span>Sign In</span>
+                </button>
+            </div>
+            
+            <!-- Signup Form -->
+            <div class="auth-form" id="signupForm">
+                <div class="alert alert-error" id="signupError"></div>
+                <div class="alert alert-success" id="signupSuccess"></div>
+                
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" id="signupUsername" placeholder="Choose username">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="signupPassword" placeholder="Choose password">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Display Name</label>
+                    <input type="text" class="form-input" id="signupDisplayName" placeholder="Your display name">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" class="form-input" id="signupPhone" placeholder="+959123456789">
+                </div>
+                
+                <button class="btn" onclick="handleSignup()" id="signupBtn">
+                    <span>Create Account</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-wrapper" id="appWrapper">
+        <!-- Connection Status -->
+        <div class="connection-status" id="connectionStatus">Connecting...</div>
+        
+        <!-- Header -->
+        <div class="app-header safe-area-top">
+            <div class="header-left">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-info">
+                    <h3 id="userName">User</h3>
+                    <p id="userStatus">Online</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="toggleDarkMode()">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="icon-btn" onclick="showNotifications()">
+                    <i class="fas fa-bell"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="content-area">
+            <!-- Chats Page -->
+            <div class="page active" id="chatsPage">
+                <div class="chats-search">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="chatSearch" placeholder="Search conversations...">
+                    </div>
+                </div>
+                <div class="chats-list" id="chatsList">
+                    <div style="text-align: center; padding: 50px; color: #666;">
+                        <i class="fas fa-comments" style="font-size: 40px; margin-bottom: 15px; color: #ddd;"></i>
+                        <p>No conversations yet</p>
+                        <p style="font-size: 13px; margin-top: 8px;">Start chatting with contacts</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contacts Page -->
+            <div class="page" id="contactsPage">
+                <div class="contacts-header safe-area-top">
+                    <div class="contacts-title">Contacts</div>
+                    <div class="contacts-subtitle">Connect with other users</div>
+                </div>
+                <div class="contacts-list" id="contactsList">
+                    <div style="text-align: center; padding: 50px; color: #666;">
+                        <i class="fas fa-users" style="font-size: 40px; margin-bottom: 15px; color: #ddd;"></i>
+                        <p>Loading contacts...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Page -->
+            <div class="page" id="chatPage">
+                <div class="chat-page-header safe-area-top">
+                    <button class="back-btn" onclick="goBackToChats()">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="chat-user">
+                        <div class="chat-user-avatar" id="chatUserAvatar">U</div>
+                        <div class="chat-user-info">
+                            <h4 id="chatUserName">User</h4>
+                            <div class="chat-user-status">
+                                <span class="status-dot"></span>
+                                <span id="chatUserStatus">Online</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="icon-btn" onclick="startCall()">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <div style="text-align: center; padding: 50px; color: #999;">
+                        <i class="fas fa-comment-dots" style="font-size: 40px; margin-bottom: 15px;"></i>
+                        <p>Start a conversation</p>
+                        <p style="font-size: 13px; margin-top: 8px;">Send your first message below</p>
+                    </div>
+                </div>
+                
+                <div class="message-input-area safe-area-bottom">
+                    <textarea class="message-input" id="messageInput" 
+                             placeholder="Type your message..." 
+                             rows="1"
+                             oninput="adjustTextarea(this)"
+                             onkeydown="checkSendKey(event)"
+                             disabled></textarea>
+                    <button class="send-button" id="sendBtn" onclick="sendMessage()" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Profile Page -->
+            <div class="page" id="profilePage">
+                <div class="profile-header safe-area-top">
+                    <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
+                    <div class="profile-name" id="profileName">User Name</div>
+                    <div class="profile-username" id="profileUsername">@username</div>
+                </div>
+                
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="chatsCount">0</div>
+                        <div class="stat-label">Chats</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="contactsCount">0</div>
+                        <div class="stat-label">Contacts</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="onlineCount">0</div>
+                        <div class="stat-label">Online</div>
+                    </div>
+                </div>
+                
+                <div class="profile-actions">
+                    <div class="action-item" onclick="showEditProfile()">
+                        <div class="action-icon">
+                            <i class="fas fa-user-edit"></i>
+                        </div>
+                        <div class="action-text">Edit Profile</div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="action-item" onclick="showSettings()">
+                        <div class="action-icon">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <div class="action-text">Settings</div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="action-item" onclick="showHelp()">
+                        <div class="action-icon">
+                            <i class="fas fa-question-circle"></i>
+                        </div>
+                        <div class="action-text">Help & Support</div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="action-item" onclick="confirmLogout()" style="color: #f44336;">
+                        <div class="action-icon" style="background: rgba(244, 67, 54, 0.1); color: #f44336;">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </div>
+                        <div class="action-text">Logout</div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav safe-area-bottom">
+            <button class="nav-item active" onclick="showPage('chatsPage')">
+                <div class="nav-icon"><i class="fas fa-comments"></i></div>
+                <div class="nav-label">Chats</div>
+            </button>
+            <button class="nav-item" onclick="showPage('contactsPage')">
+                <div class="nav-icon"><i class="fas fa-users"></i></div>
+                <div class="nav-label">Contacts</div>
+            </button>
+            <button class="nav-item" onclick="showPage('profilePage')">
+                <div class="nav-icon"><i class="fas fa-user"></i></div>
+                <div class="nav-label">Profile</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="modal" id="logoutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Confirm Logout</div>
+                <button class="modal-close" onclick="hideModal('logoutModal')">&times;</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <p>Are you sure you want to logout?</p>
+                <p style="color: #666; font-size: 13px; margin-top: 8px;">You'll need to sign in again to use QuickChat.</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="hideModal('logoutModal')" style="background: #666;">
+                    Cancel
+                </button>
+                <button class="btn" onclick="performLogout()" style="background: #f44336;">
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal" id="editProfileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Edit Profile</div>
+                <button class="modal-close" onclick="hideModal('editProfileModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Display Name</label>
+                <input type="text" class="form-input" id="editDisplayName" placeholder="Your name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input type="tel" class="form-input" id="editPhone" placeholder="+959123456789">
+            </div>
+            <button class="btn" onclick="updateProfile()">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Settings</div>
+                <button class="modal-close" onclick="hideModal('settingsModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notification Sound</label>
+                <select class="form-input" id="notificationSound">
+                    <option value="on">On</option>
+                    <option value="off">Off</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Theme</label>
+                <select class="form-input" id="themeSelect">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="auto">Auto</option>
+                </select>
+            </div>
+            <button class="btn" onclick="saveSettings()">Save Settings</button>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Help & Support</div>
+                <button class="modal-close" onclick="hideModal('helpModal')">&times;</button>
+            </div>
+            <div style="line-height: 1.6;">
+                <h4 style="margin-bottom: 15px; color: #6a11cb;">QuickChat Messenger</h4>
+                <p style="margin-bottom: 15px;">Version 2.0.0</p>
+                <p style="margin-bottom: 20px; color: #666;">A real-time messaging application built with Supabase.</p>
+                
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin: 20px 0;">
+                    <h5 style="margin-bottom: 10px;">Features:</h5>
+                    <ul style="padding-left: 20px;">
+                        <li>Real-time messaging</li>
+                        <li>Online status tracking</li>
+                        <li>Contact management</li>
+                        <li>Dark/Light theme</li>
+                        <li>Offline support</li>
+                    </ul>
+                </div>
+                
+                <p style="font-size: 14px; color: #999;">For support, contact: support@quickchat.com</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio for notifications -->
+    <audio id="notificationAudio" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Install App Banner -->
+    <div id="installBanner" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #6a11cb; color: white; padding: 14px; z-index: 10005; text-align: center; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1; text-align: left;">
+                <strong style="font-size: 15px;">Install QuickChat</strong>
+                <p style="font-size: 13px; margin-top: 4px;">Add to home screen for better experience</p>
+            </div>
+            <button onclick="installApp()" style="background: white; color: #6a11cb; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">Install</button>
+            <button onclick="hideInstallBanner()" style="background: none; border: none; color: white; margin-left: 8px; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="config.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+{
+  "name": "QuickChat Messenger",
+  "short_name": "QuickChat",
+  "description": "Real-time messaging application",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#6a11cb",
+  "theme_color": "#6a11cb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/96/000000/chat.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://img.icons8.com/color/144/000000/chat.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/color/192/000000/chat.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/000000/chat.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["social", "communication"],
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/540x960/6a11cb/ffffff?text=QuickChat+Login",
+      "sizes": "540x960",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://via.placeholder.com/1024/768/6a11cb/ffffff?text=QuickChat+Chats",
+      "sizes": "1024x768",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "New Chat",
+      "short_name": "Chat",
+      "description": "Start a new chat",
+      "url": "/index.html?newchat=true",
+      "icons": [{ "src": "https://img.icons8.com/color/96/000000/new-message.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Contacts",
+      "short_name": "Contacts",
+      "description": "View your contacts",
+      "url": "/index.html?page=contacts",
+      "icons": [{ "src": "https://img.icons8.com/color/96/000000/contacts.png", "sizes": "96x96" }]
+    }
+  ]
+}
