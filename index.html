@@ -1,0 +1,3582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>QuickChat Messenger</title>
+    
+    <!-- PWA Configuration for Android -->
+    <meta name="theme-color" content="#6a11cb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Supabase for Android Compatibility -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/umd/supabase.min.js"></script>
+    
+    <!-- Mobile-friendly touch icons -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/96/000000/chat.png">
+    <link rel="icon" type="image/png" href="https://img.icons8.com/color/96/000000/chat.png">
+    
+    <style>
+        /* Android-Optimized Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        input, textarea, button {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            border-radius: 0;
+            outline: none;
+        }
+
+        input, textarea {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+            touch-action: manipulation;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Safe Area Insets for Android Notch */
+        .safe-area-top {
+            padding-top: env(safe-area-inset-top, 0px);
+        }
+
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* Loading Screen - Android Optimized */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+        }
+
+        .loader-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: rotate 1s infinite linear;
+            margin-bottom: 20px;
+        }
+
+        @keyframes rotate {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Auth Screen */
+        .auth-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            z-index: 9998;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-top: max(10px, env(safe-area-inset-top, 0px));
+            padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+        }
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px 20px;
+            max-width: 400px;
+            margin: 20px auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* App Logo */
+        .app-logo {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .logo-icon {
+            font-size: 40px;
+            color: #6a11cb;
+            margin-bottom: 10px;
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Auth Tabs */
+        .auth-tabs {
+            display: flex;
+            background: #f0f0f0;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 14px 10px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 15px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-tab.active {
+            background: white;
+            box-shadow: 0 2px 8px rgba(106, 17, 203, 0.15);
+            color: #6a11cb;
+        }
+
+        /* Forms */
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: white;
+            min-height: 48px;
+        }
+
+        .form-input:focus {
+            border-color: #6a11cb;
+            box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.1);
+        }
+
+        /* Buttons - Android Optimized */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+
+        /* Main App Container */
+        .app-wrapper {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+            background: #f8f9fa;
+        }
+
+        /* Header - Android Optimized */
+        .app-header {
+            background: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            position: relative;
+            z-index: 100;
+            padding-top: max(12px, env(safe-area-inset-top, 0px));
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .user-info h3 {
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .user-info p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f5f5f5;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #666;
+            font-size: 16px;
+            transition: all 0.3s;
+            flex-shrink: 0;
+            touch-action: manipulation;
+        }
+
+        .icon-btn:active {
+            background: #e9ecef;
+            transform: scale(0.95);
+        }
+
+        /* Bottom Navigation - Android Friendly */
+        .bottom-nav {
+            display: flex;
+            background: white;
+            padding: 8px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+            position: relative;
+            z-index: 100;
+            padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: none;
+            border: none;
+            padding: 8px 4px;
+            cursor: pointer;
+            color: #999;
+            transition: all 0.3s;
+            min-height: 52px;
+            touch-action: manipulation;
+        }
+
+        .nav-item.active {
+            color: #6a11cb;
+        }
+
+        .nav-item:active {
+            opacity: 0.7;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding-bottom: 80px;
+            display: none;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Chats Page */
+        .chats-search {
+            padding: 16px;
+            background: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            z-index: 1;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 16px 14px 44px;
+            border: 1.5px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            background: #f8f9fa;
+            transition: all 0.3s;
+            min-height: 48px;
+        }
+
+        .search-input:focus {
+            border-color: #6a11cb;
+            background: white;
+        }
+
+        .chats-list {
+            padding: 0 16px;
+        }
+
+        .chat-card {
+            background: white;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            touch-action: manipulation;
+        }
+
+        .chat-card:active {
+            transform: scale(0.99);
+            background: #f8f9fa;
+        }
+
+        .chat-card.unread {
+            background: linear-gradient(135deg, rgba(106, 17, 203, 0.05) 0%, rgba(37, 117, 252, 0.05) 100%);
+            border-left: 4px solid #6a11cb;
+        }
+
+        .chat-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .chat-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .chat-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .chat-time {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .chat-preview {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-message {
+            color: #666;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            margin-right: 8px;
+        }
+
+        .chat-badge {
+            background: #6a11cb;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        /* Chat Page */
+        .chat-page-header {
+            background: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            padding-top: max(12px, env(safe-area-inset-top, 0px));
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #666;
+            cursor: pointer;
+            padding: 8px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            touch-action: manipulation;
+        }
+
+        .back-btn:active {
+            background: #f5f5f5;
+        }
+
+        .chat-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .chat-user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .chat-user-info h4 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 2px;
+            font-weight: 600;
+        }
+
+        .chat-user-status {
+            font-size: 12px;
+            color: #4CAF50;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            padding: 16px;
+            min-height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 100px;
+        }
+
+        .message-group {
+            margin-bottom: 12px;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-group.sent {
+            align-self: flex-end;
+        }
+
+        .message-group.received {
+            align-self: flex-start;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 18px;
+            margin-bottom: 4px;
+            position: relative;
+            word-wrap: break-word;
+            line-height: 1.4;
+            font-size: 14px;
+        }
+
+        .sent .message {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+
+        .received .message {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        .message-time {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: right;
+            margin-top: 2px;
+        }
+
+        .received .message-time {
+            color: #999;
+        }
+
+        /* Message Input Area - Android Keyboard Optimized */
+        .message-input-area {
+            position: fixed;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 10px 16px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            z-index: 100;
+            padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1.5px solid #e9ecef;
+            border-radius: 24px;
+            font-size: 16px;
+            resize: none;
+            max-height: 100px;
+            min-height: 48px;
+            line-height: 1.4;
+            font-family: inherit;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .message-input:focus {
+            border-color: #6a11cb;
+        }
+
+        .send-button {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+            flex-shrink: 0;
+            touch-action: manipulation;
+        }
+
+        .send-button:active {
+            transform: scale(0.95);
+        }
+
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Contacts Page */
+        .contacts-header {
+            padding: 20px 16px 16px;
+            background: white;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+            padding-top: max(20px, env(safe-area-inset-top, 0px));
+        }
+
+        .contacts-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .contacts-subtitle {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .contacts-list {
+            padding: 16px;
+        }
+
+        .contact-item {
+            background: white;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+
+        .contact-item:active {
+            transform: scale(0.99);
+            background: #f8f9fa;
+        }
+
+        .contact-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+            margin-bottom: 3px;
+        }
+
+        .contact-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-text {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .online-dot {
+            width: 6px;
+            height: 6px;
+            background: #4CAF50;
+            border-radius: 50%;
+        }
+
+        /* Profile Page */
+        .profile-header {
+            background: white;
+            padding: 30px 20px 25px;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+            padding-top: max(30px, env(safe-area-inset-top, 0px));
+        }
+
+        .profile-avatar-large {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 36px;
+            margin: 0 auto 15px;
+            border: 4px solid white;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .profile-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .profile-username {
+            color: #666;
+            font-size: 15px;
+        }
+
+        .profile-stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px 16px;
+            background: white;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #6a11cb;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .profile-actions {
+            background: white;
+            margin: 10px 16px;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .action-item {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f5f5f5;
+            transition: all 0.3s;
+            touch-action: manipulation;
+        }
+
+        .action-item:last-child {
+            border-bottom: none;
+        }
+
+        .action-item:active {
+            background: #f9f9f9;
+        }
+
+        .action-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6a11cb;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .action-text {
+            flex: 1;
+            font-size: 15px;
+            color: #333;
+        }
+
+        .action-arrow {
+            color: #999;
+            font-size: 13px;
+        }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ff9800;
+            color: white;
+            text-align: center;
+            padding: 12px;
+            font-size: 13px;
+            z-index: 10001;
+            display: none;
+            animation: slideDown 0.3s ease;
+            padding-top: max(12px, env(safe-area-inset-top, 0px));
+        }
+
+        .connection-status.online {
+            background: #4CAF50;
+        }
+
+        .connection-status.offline {
+            background: #f44336;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(0); }
+        }
+
+        /* Toast Notifications - Android Style */
+        .toast-container {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10002;
+            width: 90%;
+            max-width: 400px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 14px 18px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeInUp 0.3s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: auto;
+        }
+
+        .toast.success {
+            background: rgba(76, 175, 80, 0.95);
+        }
+
+        .toast.error {
+            background: rgba(244, 67, 54, 0.95);
+        }
+
+        .toast.info {
+            background: rgba(33, 150, 243, 0.95);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10003;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            max-width: 480px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: scaleIn 0.3s ease;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: #999;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            touch-action: manipulation;
+        }
+
+        .modal-close:active {
+            background: #f5f5f5;
+        }
+
+        /* Dark Mode - Android Compatible */
+        body.dark-mode {
+            background: #121212;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .auth-card,
+        body.dark-mode .app-header,
+        body.dark-mode .bottom-nav,
+        body.dark-mode .chat-page-header,
+        body.dark-mode .message-input-area,
+        body.dark-mode .chats-search,
+        body.dark-mode .contacts-header,
+        body.dark-mode .profile-header,
+        body.dark-mode .profile-stats,
+        body.dark-mode .profile-actions,
+        body.dark-mode .modal-content {
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .chat-card,
+        body.dark-mode .contact-item {
+            background: #252525;
+        }
+
+        body.dark-mode .received .message {
+            background: #252525;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .search-input,
+        body.dark-mode .message-input {
+            background: #2d2d2d;
+            border-color: #404040;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .form-input {
+            background: #2d2d2d;
+            border-color: #404040;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .chat-name,
+        body.dark-mode .contact-name,
+        body.dark-mode .profile-name,
+        body.dark-mode .user-info h3,
+        body.dark-mode .chat-user-info h4,
+        body.dark-mode .modal-title {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .chat-message,
+        body.dark-mode .user-info p,
+        body.dark-mode .contacts-subtitle,
+        body.dark-mode .profile-username,
+        body.dark-mode .stat-label {
+            color: #aaa;
+        }
+
+        body.dark-mode .icon-btn {
+            background: #2d2d2d;
+            color: #aaa;
+        }
+
+        body.dark-mode .action-icon {
+            background: rgba(106, 17, 203, 0.2);
+        }
+
+        /* Loading skeletons */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Android-specific optimizations */
+        @media (max-width: 360px) {
+            .auth-card {
+                padding: 20px 16px;
+                margin: 16px auto;
+            }
+            
+            .profile-stats {
+                padding: 16px 12px;
+            }
+            
+            .stat-number {
+                font-size: 20px;
+            }
+            
+            .chat-card, .contact-item {
+                padding: 12px;
+            }
+            
+            .modal-content {
+                padding: 16px;
+            }
+        }
+
+        /* Android Chrome 100vh fix */
+        @supports (-webkit-touch-callout: none) {
+            body, .loader, .auth-screen {
+                height: -webkit-fill-available;
+            }
+        }
+
+        /* Prevent text size adjustment on orientation change */
+        html {
+            -webkit-text-size-adjust: 100%;
+            -moz-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+
+        /* Smooth scrolling for Android */
+        * {
+            scroll-behavior: smooth;
+        }
+
+        /* Hide scrollbar but keep functionality */
+        .page::-webkit-scrollbar {
+            display: none;
+        }
+
+        .page {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Improved touch feedback */
+        .chat-card, .contact-item, .action-item {
+            transition: background-color 0.1s, transform 0.1s;
+        }
+
+        /* Android-style focus states */
+        *:focus {
+            outline: none;
+        }
+
+        .form-input:focus, .search-input:focus, .message-input:focus {
+            border-color: #6a11cb;
+            box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.1);
+        }
+
+        /* Improved button touch targets */
+        .btn, .icon-btn, .nav-item, .action-item {
+            min-height: 44px;
+        }
+
+        /* Android status bar padding */
+        @media (orientation: landscape) {
+            .safe-area-top {
+                padding-top: max(12px, env(safe-area-inset-top, 0px));
+            }
+        }
+    </style>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Roboto Font for Android -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loader" id="loader">
+        <div class="loader-spinner"></div>
+        <div style="margin-top: 15px; font-size: 15px;">Loading QuickChat...</div>
+    </div>
+
+    <!-- Auth Screen -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <div class="app-logo">
+                <div class="logo-icon"><i class="fas fa-comment-dots"></i></div>
+                <div class="logo-text">QuickChat</div>
+            </div>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="showAuthForm('login')">Sign In</div>
+                <div class="auth-tab" onclick="showAuthForm('signup')">Sign Up</div>
+            </div>
+            
+            <!-- Login Form -->
+            <div class="auth-form active" id="loginForm">
+                <div class="alert alert-error" id="loginError"></div>
+                <div class="alert alert-success" id="loginSuccess"></div>
+                
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" id="loginUsername" placeholder="Enter username" value="Sun Day">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="Enter password" value="SunDay@chatting!01234">
+                </div>
+                
+                <button class="btn" onclick="handleLogin()" id="loginBtn">
+                    <span>Sign In</span>
+                </button>
+            </div>
+            
+            <!-- Signup Form -->
+            <div class="auth-form" id="signupForm">
+                <div class="alert alert-error" id="signupError"></div>
+                <div class="alert alert-success" id="signupSuccess"></div>
+                
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" id="signupUsername" placeholder="Choose username">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="signupPassword" placeholder="Choose password">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Display Name</label>
+                    <input type="text" class="form-input" id="signupDisplayName" placeholder="Your display name">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" class="form-input" id="signupPhone" placeholder="+959123456789">
+                </div>
+                
+                <button class="btn" onclick="handleSignup()" id="signupBtn">
+                    <span>Create Account</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-wrapper" id="appWrapper">
+        <!-- Connection Status -->
+        <div class="connection-status" id="connectionStatus">Connecting...</div>
+        
+        <!-- Header -->
+        <div class="app-header safe-area-top">
+            <div class="header-left">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-info">
+                    <h3 id="userName">User</h3>
+                    <p id="userStatus">Online</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="toggleDarkMode()">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="icon-btn" onclick="showNotifications()">
+                    <i class="fas fa-bell"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="content-area">
+            <!-- Chats Page -->
+            <div class="page active" id="chatsPage">
+                <div class="chats-search">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="chatSearch" placeholder="Search conversations...">
+                    </div>
+                </div>
+                <div class="chats-list" id="chatsList">
+                    <div style="text-align: center; padding: 50px; color: #666;">
+                        <i class="fas fa-comments" style="font-size: 40px; margin-bottom: 15px; color: #ddd;"></i>
+                        <p>No conversations yet</p>
+                        <p style="font-size: 13px; margin-top: 8px;">Start chatting with contacts</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contacts Page -->
+            <div class="page" id="contactsPage">
+                <div class="contacts-header safe-area-top">
+                    <div class="contacts-title">Contacts</div>
+                    <div class="contacts-subtitle">Connect with other users</div>
+                </div>
+                <div class="contacts-list" id="contactsList">
+                    <div style="text-align: center; padding: 50px; color: #666;">
+                        <i class="fas fa-users" style="font-size: 40px; margin-bottom: 15px; color: #ddd;"></i>
+                        <p>Loading contacts...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Page -->
+            <div class="page" id="chatPage">
+                <div class="chat-page-header safe-area-top">
+                    <button class="back-btn" onclick="goBackToChats()">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="chat-user">
+                        <div class="chat-user-avatar" id="chatUserAvatar">U</div>
+                        <div class="chat-user-info">
+                            <h4 id="chatUserName">User</h4>
+                            <div class="chat-user-status">
+                                <span class="status-dot"></span>
+                                <span id="chatUserStatus">Online</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="icon-btn" onclick="startCall()">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <div style="text-align: center; padding: 50px; color: #999;">
+                        <i class="fas fa-comment-dots" style="font-size: 40px; margin-bottom: 15px;"></i>
+                        <p>Start a conversation</p>
+                        <p style="font-size: 13px; margin-top: 8px;">Send your first message below</p>
+                    </div>
+                </div>
+                
+                <div class="message-input-area safe-area-bottom">
+                    <textarea class="message-input" id="messageInput" 
+                             placeholder="Type your message..." 
+                             rows="1"
+                             oninput="adjustTextarea(this)"
+                             onkeydown="checkSendKey(event)"
+                             disabled></textarea>
+                    <button class="send-button" id="sendBtn" onclick="sendMessage()" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Profile Page -->
+            <div class="page" id="profilePage">
+                <div class="profile-header safe-area-top">
+                    <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
+                    <div class="profile-name" id="profileName">User Name</div>
+                    <div class="profile-username" id="profileUsername">@username</div>
+                </div>
+                
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="chatsCount">0</div>
+                        <div class="stat-label">Chats</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="contactsCount">0</div>
+                        <div class="stat-label">Contacts</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="onlineCount">0</div>
+                        <div class="stat-label">Online</div>
+                    </div>
+                </div>
+                
+                <div class="profile-actions">
+                    <div class="action-item" onclick="showEditProfile()">
+                        <div class="action-icon">
+                            <i class="fas fa-user-edit"></i>
+                        </div>
+                        <div class="action-text">Edit Profile</div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="action-item" onclick="showSettings()">
+                        <div class="action-icon">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <div class="action-text">Settings</div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="action-item" onclick="showHelp()">
+                        <div class="action-icon">
+                            <i class="fas fa-question-circle"></i>
+                        </div>
+                        <div class="action-text">Help & Support</div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="action-item" onclick="confirmLogout()" style="color: #f44336;">
+                        <div class="action-icon" style="background: rgba(244, 67, 54, 0.1); color: #f44336;">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </div>
+                        <div class="action-text">Logout</div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav safe-area-bottom">
+            <button class="nav-item active" onclick="showPage('chatsPage')">
+                <div class="nav-icon"><i class="fas fa-comments"></i></div>
+                <div class="nav-label">Chats</div>
+            </button>
+            <button class="nav-item" onclick="showPage('contactsPage')">
+                <div class="nav-icon"><i class="fas fa-users"></i></div>
+                <div class="nav-label">Contacts</div>
+            </button>
+            <button class="nav-item" onclick="showPage('profilePage')">
+                <div class="nav-icon"><i class="fas fa-user"></i></div>
+                <div class="nav-label">Profile</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="modal" id="logoutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Confirm Logout</div>
+                <button class="modal-close" onclick="hideModal('logoutModal')">&times;</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <p>Are you sure you want to logout?</p>
+                <p style="color: #666; font-size: 13px; margin-top: 8px;">You'll need to sign in again to use QuickChat.</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="hideModal('logoutModal')" style="background: #666;">
+                    Cancel
+                </button>
+                <button class="btn" onclick="performLogout()" style="background: #f44336;">
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div class="modal" id="editProfileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Edit Profile</div>
+                <button class="modal-close" onclick="hideModal('editProfileModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Display Name</label>
+                <input type="text" class="form-input" id="editDisplayName" placeholder="Your name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input type="tel" class="form-input" id="editPhone" placeholder="+959123456789">
+            </div>
+            <button class="btn" onclick="updateProfile()">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Settings</div>
+                <button class="modal-close" onclick="hideModal('settingsModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notification Sound</label>
+                <select class="form-input" id="notificationSound">
+                    <option value="on">On</option>
+                    <option value="off">Off</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Theme</label>
+                <select class="form-input" id="themeSelect">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="auto">Auto</option>
+                </select>
+            </div>
+            <button class="btn" onclick="saveSettings()">Save Settings</button>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Help & Support</div>
+                <button class="modal-close" onclick="hideModal('helpModal')">&times;</button>
+            </div>
+            <div style="line-height: 1.6;">
+                <h4 style="margin-bottom: 15px; color: #6a11cb;">QuickChat Messenger</h4>
+                <p style="margin-bottom: 15px;">Version 2.0.0</p>
+                <p style="margin-bottom: 20px; color: #666;">A real-time messaging application built with Supabase.</p>
+                
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin: 20px 0;">
+                    <h5 style="margin-bottom: 10px;">Features:</h5>
+                    <ul style="padding-left: 20px;">
+                        <li>Real-time messaging</li>
+                        <li>Online status tracking</li>
+                        <li>Contact management</li>
+                        <li>Dark/Light theme</li>
+                        <li>Offline support</li>
+                    </ul>
+                </div>
+                
+                <p style="font-size: 14px; color: #999;">For support, contact: support@quickchat.com</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio for notifications -->
+    <audio id="notificationAudio" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Install App Banner -->
+    <div id="installBanner" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #6a11cb; color: white; padding: 14px; z-index: 10005; text-align: center; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1; text-align: left;">
+                <strong style="font-size: 15px;">Install QuickChat</strong>
+                <p style="font-size: 13px; margin-top: 4px;">Add to home screen for better experience</p>
+            </div>
+            <button onclick="installApp()" style="background: white; color: #6a11cb; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">Install</button>
+            <button onclick="hideInstallBanner()" style="background: none; border: none; color: white; margin-left: 8px; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // CONFIGURATION AND STATE MANAGEMENT
+        // =========================================================================
+        const SUPABASE_URL = 'https://apmhwagvmjajitsagruk.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_OSovGbln41HG96yLOuxwAA_fIKU73gQ';
+        
+        // Application State
+        const appState = {
+            supabase: null,
+            currentUser: null,
+            activeChat: null,
+            users: [],
+            messages: {},
+            onlineUsers: new Set(),
+            subscriptions: [],
+            pollingInterval: null,
+            connectionCheckInterval: null,
+            deferredPrompt: null,
+            isOnline: true,
+            isInitialized: false
+        };
+
+        // =========================================================================
+        // INITIALIZATION - Android Optimized
+        // =========================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Prevent double initialization
+            if (appState.isInitialized) return;
+            
+            console.log('🚀 Starting QuickChat Messenger for Android...');
+            
+            // Initialize immediately to avoid loading issues
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            try {
+                // Show loader immediately
+                document.getElementById('loader').style.display = 'flex';
+                
+                // Initialize Supabase with Android-optimized settings
+                appState.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: {
+                        persistSession: true,
+                        autoRefreshToken: true,
+                        detectSessionInUrl: false,
+                        storage: localStorage,
+                        storageKey: 'quickchat_auth'
+                    },
+                    realtime: {
+                        params: {
+                            eventsPerSecond: 5 // Reduced for Android performance
+                        }
+                    },
+                    global: {
+                        headers: {
+                            'X-Client-Info': 'quickchat-android-web'
+                        }
+                    }
+                });
+
+                // Load user settings
+                loadUserSettings();
+
+                // Setup event handlers for Android
+                setupAndroidEventHandlers();
+
+                // Check for PWA installation
+                setupPWA();
+
+                // Check connection with timeout for Android
+                await verifyConnectionWithTimeout();
+
+                // Check for existing session
+                const savedSession = getSavedSession();
+                if (savedSession) {
+                    await restoreSession(savedSession);
+                } else {
+                    showAuthScreen();
+                }
+
+                appState.isInitialized = true;
+                console.log('✅ QuickChat initialized successfully');
+
+            } catch (error) {
+                console.error('❌ Initialization error:', error);
+                showError('Failed to initialize. Please check your connection and refresh.');
+                showAuthScreen(); // Fallback to auth screen
+            } finally {
+                // Always hide loader after initialization
+                setTimeout(hideLoader, 500);
+            }
+        }
+
+        // =========================================================================
+        // ANDROID-SPECIFIC OPTIMIZATIONS
+        // =========================================================================
+        function setupAndroidEventHandlers() {
+            // Prevent zoom on double tap
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function(event) {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    event.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, { passive: false });
+
+            // Handle Android back button
+            document.addEventListener('backbutton', function(e) {
+                if (document.getElementById('chatPage').classList.contains('active')) {
+                    e.preventDefault();
+                    goBackToChats();
+                }
+            }, false);
+
+            // Handle Android keyboard events
+            window.addEventListener('resize', handleAndroidKeyboard);
+            
+            // Prevent pull-to-refresh on Android
+            document.addEventListener('touchmove', function(e) {
+                if (e.scale !== 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            // Improved touch feedback for Android
+            document.addEventListener('touchstart', function() {}, { passive: true });
+            
+            // Online/offline detection for Android
+            window.addEventListener('online', handleAndroidOnlineStatus);
+            window.addEventListener('offline', handleAndroidOnlineStatus);
+            
+            // Handle page visibility for Android
+            document.addEventListener('visibilitychange', handleAndroidVisibility);
+            
+            // Prevent context menu on long press
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+        }
+
+        function handleAndroidKeyboard() {
+            const isKeyboardOpen = window.innerHeight < window.outerHeight * 0.8;
+            const chatMessages = document.getElementById('chatMessages');
+            const messageInputArea = document.querySelector('.message-input-area');
+            
+            if (isKeyboardOpen && chatMessages && messageInputArea) {
+                // Scroll to bottom when keyboard opens
+                setTimeout(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    messageInputArea.style.bottom = 'calc(60px + 50vh)';
+                }, 300);
+            } else if (messageInputArea) {
+                messageInputArea.style.bottom = '60px';
+            }
+        }
+
+        function handleAndroidOnlineStatus() {
+            const isOnline = navigator.onLine;
+            appState.isOnline = isOnline;
+            
+            if (isOnline) {
+                updateConnectionStatus(true);
+                showToast('Back online', 'success');
+                // Reinitialize realtime connection
+                if (appState.currentUser) {
+                    setTimeout(() => setupRealtimeSubscriptions(), 1000);
+                }
+            } else {
+                updateConnectionStatus(false);
+                showToast('You are offline', 'error');
+            }
+        }
+
+        function handleAndroidVisibility() {
+            if (appState.currentUser) {
+                const isVisible = !document.hidden;
+                updateUserPresence(isVisible);
+                
+                if (isVisible && appState.isOnline) {
+                    // Refresh data when app becomes visible
+                    setTimeout(() => {
+                        refreshOnlineUsers();
+                        loadUserChats();
+                    }, 500);
+                }
+            }
+        }
+
+        async function verifyConnectionWithTimeout() {
+            return new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    console.log('Connection check timeout - proceeding anyway');
+                    resolve(false);
+                }, 5000); // 5 second timeout for Android
+
+                verifyConnection().then((connected) => {
+                    clearTimeout(timeout);
+                    resolve(connected);
+                }).catch(() => {
+                    clearTimeout(timeout);
+                    resolve(false);
+                });
+            });
+        }
+
+        // =========================================================================
+        // CONNECTION MANAGEMENT - Android Optimized
+        // =========================================================================
+        async function verifyConnection() {
+            try {
+                // Simple ping to check connection
+                const { data, error } = await appState.supabase
+                    .from('users')
+                    .select('count')
+                    .limit(1)
+                    .single();
+
+                if (error) {
+                    console.warn('Connection check failed:', error.message);
+                    updateConnectionStatus(false);
+                    return false;
+                }
+
+                updateConnectionStatus(true);
+                return true;
+
+            } catch (error) {
+                console.error('Connection verification failed:', error);
+                updateConnectionStatus(false);
+                return false;
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (!statusEl) return;
+            
+            appState.isOnline = connected;
+            
+            if (connected) {
+                statusEl.textContent = 'Connected';
+                statusEl.className = 'connection-status online';
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 2000);
+            } else {
+                statusEl.textContent = 'Disconnected - Check your connection';
+                statusEl.className = 'connection-status offline';
+                statusEl.style.display = 'block';
+            }
+        }
+
+        // =========================================================================
+        // SESSION MANAGEMENT - Android Storage Optimized
+        // =========================================================================
+        function getSavedSession() {
+            try {
+                const sessionData = localStorage.getItem('quickchat_session');
+                if (!sessionData) return null;
+                
+                const session = JSON.parse(sessionData);
+                
+                // Check if session is expired (24 hours)
+                const now = Date.now();
+                const sessionTime = session.timestamp || 0;
+                const hoursDiff = (now - sessionTime) / (1000 * 60 * 60);
+                
+                if (hoursDiff > 24) {
+                    localStorage.removeItem('quickchat_session');
+                    return null;
+                }
+                
+                return session.user;
+            } catch (error) {
+                console.warn('Failed to parse saved session:', error);
+                localStorage.removeItem('quickchat_session');
+                return null;
+            }
+        }
+
+        function saveSession(user) {
+            try {
+                const sessionData = {
+                    user: user,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('quickchat_session', JSON.stringify(sessionData));
+            } catch (error) {
+                console.error('Failed to save session:', error);
+            }
+        }
+
+        function clearSession() {
+            try {
+                localStorage.removeItem('quickchat_session');
+                localStorage.removeItem('quickchat_auth');
+            } catch (error) {
+                console.warn('Failed to clear session:', error);
+            }
+        }
+
+        async function restoreSession(savedUser) {
+            try {
+                // Verify user still exists
+                const { data: user, error } = await appState.supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', savedUser.id)
+                    .single();
+
+                if (error || !user) {
+                    clearSession();
+                    showAuthScreen();
+                    return;
+                }
+
+                appState.currentUser = user;
+                await startApplication();
+
+            } catch (error) {
+                console.error('Session restoration failed:', error);
+                showAuthScreen();
+            }
+        }
+
+        // =========================================================================
+        // AUTHENTICATION - Android Optimized
+        // =========================================================================
+        function showAuthScreen() {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('authScreen').style.display = 'block';
+            document.getElementById('appWrapper').style.display = 'none';
+            showAuthForm('login');
+            
+            // Auto-focus on username input
+            setTimeout(() => {
+                const usernameInput = document.getElementById('loginUsername');
+                if (usernameInput) {
+                    usernameInput.focus();
+                    // Scroll input into view on Android
+                    usernameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        }
+
+        function showAuthForm(formType) {
+            // Update tabs with smooth transition
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.style.opacity = '0';
+                form.classList.remove('active');
+            });
+
+            // Show selected form
+            setTimeout(() => {
+                if (formType === 'login') {
+                    document.querySelectorAll('.auth-tab')[0].classList.add('active');
+                    document.getElementById('loginForm').classList.add('active');
+                    document.getElementById('loginForm').style.opacity = '1';
+                    
+                    // Auto-focus
+                    setTimeout(() => {
+                        const usernameInput = document.getElementById('loginUsername');
+                        if (usernameInput) usernameInput.focus();
+                    }, 50);
+                } else {
+                    document.querySelectorAll('.auth-tab')[1].classList.add('active');
+                    document.getElementById('signupForm').classList.add('active');
+                    document.getElementById('signupForm').style.opacity = '1';
+                    
+                    // Auto-focus
+                    setTimeout(() => {
+                        const usernameInput = document.getElementById('signupUsername');
+                        if (usernameInput) usernameInput.focus();
+                    }, 50);
+                }
+            }, 50);
+
+            // Clear messages
+            ['loginError', 'loginSuccess', 'signupError', 'signupSuccess'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = 'none';
+                    el.textContent = '';
+                }
+            });
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+            const btn = document.getElementById('loginBtn');
+
+            if (!username || !password) {
+                showAlert(errorEl, 'Please enter username and password');
+                return;
+            }
+
+            // Android: Hide keyboard
+            document.activeElement?.blur();
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
+
+            try {
+                // Find user with timeout for Android
+                const { data: user, error } = await Promise.race([
+                    appState.supabase
+                        .from('users')
+                        .select('*')
+                        .eq('username', username)
+                        .eq('password', password)
+                        .single(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Request timeout')), 10000)
+                    )
+                ]);
+
+                if (error || !user) {
+                    throw new Error('Invalid username or password');
+                }
+
+                // Save session
+                appState.currentUser = user;
+                saveSession(user);
+
+                // Update online status
+                await updateUserPresence(true);
+
+                // Start application
+                await startApplication();
+
+                showToast(`Welcome back, ${user.display_name || user.username}!`, 'success');
+
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert(errorEl, error.message || 'Login failed. Check connection.');
+                btn.disabled = false;
+                btn.innerHTML = '<span>Sign In</span>';
+            }
+        }
+
+        async function handleSignup() {
+            const username = document.getElementById('signupUsername').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const displayName = document.getElementById('signupDisplayName').value.trim() || username;
+            const phone = document.getElementById('signupPhone').value.trim();
+            const errorEl = document.getElementById('signupError');
+            const successEl = document.getElementById('signupSuccess');
+            const btn = document.getElementById('signupBtn');
+
+            if (!username || !password) {
+                showAlert(errorEl, 'Username and password are required');
+                return;
+            }
+
+            if (username.length < 3) {
+                showAlert(errorEl, 'Username must be at least 3 characters');
+                return;
+            }
+
+            if (password.length < 6) {
+                showAlert(errorEl, 'Password must be at least 6 characters');
+                return;
+            }
+
+            // Android: Hide keyboard
+            document.activeElement?.blur();
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
+
+            try {
+                // Check username availability with timeout
+                const { data: existingUser } = await Promise.race([
+                    appState.supabase
+                        .from('users')
+                        .select('id')
+                        .eq('username', username)
+                        .single(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Request timeout')), 10000)
+                    )
+                ]);
+
+                if (existingUser) {
+                    throw new Error('Username already taken');
+                }
+
+                // Create user
+                const { data: user, error } = await appState.supabase
+                    .from('users')
+                    .insert({
+                        username: username,
+                        password: password,
+                        display_name: displayName,
+                        phone: phone,
+                        role: 'user',
+                        last_seen: new Date().toISOString()
+                    })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                // Show success message
+                showAlert(successEl, 'Account created successfully!');
+
+                // Auto login after delay
+                setTimeout(async () => {
+                    appState.currentUser = user;
+                    saveSession(user);
+                    await startApplication();
+                    showToast('Welcome to QuickChat!', 'success');
+                }, 1500);
+
+            } catch (error) {
+                console.error('Signup error:', error);
+                showAlert(errorEl, error.message || 'Registration failed. Try again.');
+                btn.disabled = false;
+                btn.innerHTML = '<span>Create Account</span>';
+            }
+        }
+
+        // =========================================================================
+        // APPLICATION CORE - Android Optimized
+        // =========================================================================
+        async function startApplication() {
+            console.log('Starting application for:', appState.currentUser.username);
+
+            // Hide auth, show app with transition
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('appWrapper').style.display = 'flex';
+            document.getElementById('appWrapper').style.opacity = '0';
+            
+            setTimeout(() => {
+                document.getElementById('appWrapper').style.opacity = '1';
+            }, 50);
+
+            // Initialize UI
+            updateUserInterface();
+            
+            // Load initial data with progress indication
+            await loadInitialData();
+
+            // Setup real-time features (optimized for Android)
+            setupRealtimeSubscriptions();
+            
+            // Start polling services (reduced frequency for Android)
+            startPollingServices();
+
+            // Hide install banner if shown
+            hideInstallBanner();
+            
+            // Android: Add splash screen behavior
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+            }, 500);
+        }
+
+        function updateUserInterface() {
+            const user = appState.currentUser;
+            if (!user) return;
+
+            // Update header
+            const firstLetter = (user.display_name || user.username).charAt(0).toUpperCase();
+            document.getElementById('userAvatar').textContent = firstLetter;
+            document.getElementById('userAvatar').style.background = getUserColor(user);
+            document.getElementById('userName').textContent = user.display_name || user.username;
+            document.getElementById('userStatus').textContent = 'Online';
+
+            // Update profile
+            document.getElementById('profileAvatarLarge').textContent = firstLetter;
+            document.getElementById('profileAvatarLarge').style.background = getUserColor(user);
+            document.getElementById('profileName').textContent = user.display_name || user.username;
+            document.getElementById('profileUsername').textContent = '@' + user.username;
+        }
+
+        async function loadInitialData() {
+            try {
+                // Show loading state
+                const chatsList = document.getElementById('chatsList');
+                const contactsList = document.getElementById('contactsList');
+                
+                if (chatsList) {
+                    chatsList.innerHTML = `
+                        <div style="text-align: center; padding: 50px;">
+                            <div class="loader-spinner" style="width: 30px; height: 30px; margin: 0 auto 15px;"></div>
+                            <p style="color: #666;">Loading chats...</p>
+                        </div>
+                    `;
+                }
+                
+                if (contactsList) {
+                    contactsList.innerHTML = `
+                        <div style="text-align: center; padding: 50px;">
+                            <div class="loader-spinner" style="width: 30px; height: 30px; margin: 0 auto 15px;"></div>
+                            <p style="color: #666;">Loading contacts...</p>
+                        </div>
+                    `;
+                }
+
+                // Load data in parallel with timeout
+                await Promise.all([
+                    loadAllUsers().catch(err => console.error('Failed to load users:', err)),
+                    loadUserChats().catch(err => console.error('Failed to load chats:', err)),
+                    refreshOnlineUsers().catch(err => console.error('Failed to refresh online users:', err))
+                ]);
+                
+                // Update stats
+                updateStatistics();
+
+            } catch (error) {
+                console.error('Failed to load initial data:', error);
+                showToast('Failed to load data', 'error');
+            }
+        }
+
+        // =========================================================================
+        // USER MANAGEMENT
+        // =========================================================================
+        async function loadAllUsers() {
+            try {
+                const { data, error } = await appState.supabase
+                    .from('users')
+                    .select('*')
+                    .neq('id', appState.currentUser.id)
+                    .order('display_name');
+
+                if (error) throw error;
+
+                appState.users = data || [];
+                renderContactsList();
+
+            } catch (error) {
+                console.error('Failed to load users:', error);
+                throw error;
+            }
+        }
+
+        async function refreshOnlineUsers() {
+            try {
+                const { data, error } = await appState.supabase
+                    .from('users')
+                    .select('id, last_seen')
+                    .neq('id', appState.currentUser.id);
+
+                if (error) throw error;
+
+                appState.onlineUsers.clear();
+                const now = new Date();
+
+                if (data) {
+                    data.forEach(user => {
+                        const lastSeen = new Date(user.last_seen);
+                        const minutesDiff = (now - lastSeen) / (1000 * 60);
+                        
+                        if (minutesDiff < 5) { // Online within 5 minutes (increased for Android)
+                            appState.onlineUsers.add(user.id);
+                        }
+                    });
+                }
+
+                updateOnlineStatusIndicators();
+
+            } catch (error) {
+                console.error('Failed to refresh online users:', error);
+            }
+        }
+
+        async function updateUserPresence(isOnline) {
+            if (!appState.currentUser) return;
+
+            try {
+                await appState.supabase
+                    .from('users')
+                    .update({
+                        last_seen: new Date().toISOString()
+                    })
+                    .eq('id', appState.currentUser.id);
+
+            } catch (error) {
+                console.error('Failed to update presence:', error);
+            }
+        }
+
+        // =========================================================================
+        // CHAT MANAGEMENT - Android Optimized
+        // =========================================================================
+        async function loadUserChats() {
+            try {
+                const { data: allMessages, error } = await appState.supabase
+                    .from('messages')
+                    .select('*')
+                    .or(`sender_id.eq.${appState.currentUser.id},receiver_id.eq.${appState.currentUser.id}`)
+                    .order('created_at', { ascending: false })
+                    .limit(50); // Limit for Android performance
+
+                if (error) throw error;
+
+                // Organize chats by contact
+                const chatMap = new Map();
+
+                if (allMessages) {
+                    allMessages.forEach(msg => {
+                        const contactId = msg.sender_id === appState.currentUser.id 
+                            ? msg.receiver_id 
+                            : msg.sender_id;
+
+                        if (!chatMap.has(contactId)) {
+                            chatMap.set(contactId, {
+                                lastMessage: msg,
+                                unreadCount: msg.sender_id !== appState.currentUser.id && !msg.read ? 1 : 0,
+                                totalMessages: 1
+                            });
+                        } else {
+                            const chat = chatMap.get(contactId);
+                            if (msg.sender_id !== appState.currentUser.id && !msg.read) {
+                                chat.unreadCount++;
+                            }
+                            chat.totalMessages++;
+                        }
+                    });
+                }
+
+                renderChatsList(chatMap);
+
+            } catch (error) {
+                console.error('Failed to load chats:', error);
+                throw error;
+            }
+        }
+
+        async function loadChatMessages(contactId) {
+            try {
+                // Show loading indicator
+                const chatMessages = document.getElementById('chatMessages');
+                if (chatMessages) {
+                    chatMessages.innerHTML = `
+                        <div style="text-align: center; padding: 50px;">
+                            <div class="loader-spinner" style="width: 30px; height: 30px; margin: 0 auto 15px;"></div>
+                            <p style="color: #666;">Loading messages...</p>
+                        </div>
+                    `;
+                }
+
+                const { data, error } = await appState.supabase
+                    .from('messages')
+                    .select('*')
+                    .or(`and(sender_id.eq.${appState.currentUser.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${appState.currentUser.id})`)
+                    .order('created_at', { ascending: true })
+                    .limit(100); // Limit for Android performance
+
+                if (error) throw error;
+
+                appState.messages[contactId] = data || [];
+                renderChatMessages();
+
+                // Mark messages as read
+                await markMessagesRead(contactId);
+
+            } catch (error) {
+                console.error('Failed to load messages:', error);
+                throw error;
+            }
+        }
+
+        async function sendMessage() {
+            if (!appState.isOnline) {
+                showToast('No internet connection', 'error');
+                return;
+            }
+
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message || !appState.activeChat) return;
+
+            // Android: Hide keyboard temporarily
+            input.blur();
+
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                const newMessage = {
+                    sender_id: appState.currentUser.id,
+                    receiver_id: appState.activeChat.id,
+                    message: message,
+                    read: false,
+                    created_at: new Date().toISOString()
+                };
+
+                // Optimistic UI update
+                addMessageToChat(newMessage, true);
+                input.value = '';
+                adjustTextarea(input);
+
+                // Send to server with timeout
+                const { data, error } = await Promise.race([
+                    appState.supabase
+                        .from('messages')
+                        .insert([newMessage])
+                        .select()
+                        .single(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Send timeout')), 10000)
+                    )
+                ]);
+
+                if (error) throw error;
+
+                // Update local state
+                if (!appState.messages[appState.activeChat.id]) {
+                    appState.messages[appState.activeChat.id] = [];
+                }
+                appState.messages[appState.activeChat.id].push(data);
+
+                // Play sound if enabled
+                playNotification();
+
+                // Android: Restore keyboard focus
+                setTimeout(() => input.focus(), 100);
+
+            } catch (error) {
+                console.error('Failed to send message:', error);
+                showToast('Failed to send message', 'error');
+                
+                // Remove optimistic message
+                const messagesContainer = document.getElementById('chatMessages');
+                const lastMessage = messagesContainer.lastElementChild;
+                if (lastMessage && lastMessage.classList.contains('sent')) {
+                    lastMessage.remove();
+                }
+                
+                // Android: Restore input
+                input.value = message;
+                setTimeout(() => input.focus(), 100);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            }
+        }
+
+        async function markMessagesRead(contactId) {
+            try {
+                await appState.supabase
+                    .from('messages')
+                    .update({ read: true })
+                    .eq('receiver_id', appState.currentUser.id)
+                    .eq('sender_id', contactId)
+                    .eq('read', false)
+                    .limit(50); // Limit for performance
+
+            } catch (error) {
+                console.error('Failed to mark messages as read:', error);
+            }
+        }
+
+        // =========================================================================
+        // REAL-TIME SUBSCRIPTIONS - Android Optimized
+        // =========================================================================
+        function setupRealtimeSubscriptions() {
+            // Clean up existing subscriptions
+            appState.subscriptions.forEach(sub => {
+                try {
+                    appState.supabase.removeChannel(sub);
+                } catch (e) {
+                    console.warn('Failed to remove subscription:', e);
+                }
+            });
+            appState.subscriptions = [];
+
+            // Only setup if online
+            if (!appState.isOnline) return;
+
+            try {
+                // Subscribe to new messages (simplified for Android)
+                const messagesSub = appState.supabase
+                    .channel('messages-' + appState.currentUser.id)
+                    .on('postgres_changes', {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'messages',
+                        filter: `receiver_id=eq.${appState.currentUser.id}`
+                    }, (payload) => {
+                        handleIncomingMessage(payload.new);
+                    })
+                    .subscribe((status) => {
+                        console.log('Realtime subscription status:', status);
+                    });
+
+                appState.subscriptions.push(messagesSub);
+
+                // Subscribe to user presence updates
+                const presenceSub = appState.supabase
+                    .channel('presence-updates')
+                    .on('postgres_changes', {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'users'
+                    }, async (payload) => {
+                        if (payload.new.id !== appState.currentUser.id) {
+                            await refreshOnlineUsers();
+                            updateStatistics();
+                        }
+                    })
+                    .subscribe();
+
+                appState.subscriptions.push(presenceSub);
+
+            } catch (error) {
+                console.error('Failed to setup realtime subscriptions:', error);
+                // Fall back to polling only
+            }
+        }
+
+        function handleIncomingMessage(message) {
+            // If message is from active chat
+            if (appState.activeChat && appState.activeChat.id === message.sender_id) {
+                addMessageToChat(message, false);
+                
+                // Add to local messages
+                if (!appState.messages[message.sender_id]) {
+                    appState.messages[message.sender_id] = [];
+                }
+                appState.messages[message.sender_id].push(message);
+                
+                // Mark as read
+                markMessagesRead(message.sender_id);
+                
+                // Play notification
+                playNotification();
+            } else {
+                // Show notification
+                showMessageNotification(message);
+                playNotification();
+            }
+            
+            // Refresh chats list
+            loadUserChats();
+        }
+
+        // =========================================================================
+        // POLLING SERVICES - Android Optimized (Reduced Frequency)
+        // =========================================================================
+        function startPollingServices() {
+            // Clear existing intervals
+            if (appState.pollingInterval) clearInterval(appState.pollingInterval);
+            if (appState.connectionCheckInterval) clearInterval(appState.connectionCheckInterval);
+
+            // Poll for updates every 10 seconds (increased for Android battery)
+            appState.pollingInterval = setInterval(async () => {
+                if (appState.currentUser && appState.isOnline) {
+                    try {
+                        await checkForNewMessages();
+                        await refreshOnlineUsers();
+                        await updateUserPresence(true);
+                        updateStatistics();
+                    } catch (error) {
+                        console.warn('Polling error:', error);
+                    }
+                }
+            }, 10000);
+
+            // Check connection every 30 seconds
+            appState.connectionCheckInterval = setInterval(async () => {
+                const connected = await verifyConnection();
+                if (!connected && appState.isOnline) {
+                    showToast('Connection lost. Reconnecting...', 'error');
+                    appState.isOnline = false;
+                } else if (connected && !appState.isOnline) {
+                    appState.isOnline = true;
+                    showToast('Back online', 'success');
+                }
+            }, 30000);
+        }
+
+        async function checkForNewMessages() {
+            if (!appState.isOnline) return;
+            
+            try {
+                const { data: newMessages, error } = await appState.supabase
+                    .from('messages')
+                    .select('*')
+                    .eq('receiver_id', appState.currentUser.id)
+                    .eq('read', false)
+                    .order('created_at', { ascending: true })
+                    .limit(20); // Limit for performance
+
+                if (error) throw error;
+
+                if (newMessages && newMessages.length > 0) {
+                    const grouped = {};
+                    newMessages.forEach(msg => {
+                        if (!grouped[msg.sender_id]) {
+                            grouped[msg.sender_id] = [];
+                        }
+                        grouped[msg.sender_id].push(msg);
+                    });
+
+                    for (const senderId in grouped) {
+                        const messages = grouped[senderId];
+                        
+                        if (appState.activeChat && appState.activeChat.id === senderId) {
+                            messages.forEach(msg => {
+                                if (!appState.messages[senderId] || 
+                                    !appState.messages[senderId].find(m => m.id === msg.id)) {
+                                    addMessageToChat(msg, false);
+                                    if (!appState.messages[senderId]) {
+                                        appState.messages[senderId] = [];
+                                    }
+                                    appState.messages[senderId].push(msg);
+                                }
+                            });
+                            
+                            await markMessagesRead(senderId);
+                        } else {
+                            showMessageNotification(messages[0]);
+                        }
+                    }
+                    
+                    await loadUserChats();
+                }
+
+            } catch (error) {
+                console.error('Failed to check for new messages:', error);
+            }
+        }
+
+        // =========================================================================
+        // UI RENDERING - Android Optimized
+        // =========================================================================
+        function renderContactsList() {
+            const container = document.getElementById('contactsList');
+            if (!container) return;
+
+            if (appState.users.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 50px; color: #666;">
+                        <i class="fas fa-user-plus" style="font-size: 40px; margin-bottom: 15px; color: #ddd;"></i>
+                        <p>No contacts available</p>
+                        <p style="font-size: 13px; margin-top: 8px;">Other users will appear here</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            appState.users.forEach(user => {
+                const isOnline = appState.onlineUsers.has(user.id);
+                const firstLetter = (user.display_name || user.username).charAt(0).toUpperCase();
+                
+                const div = document.createElement('div');
+                div.className = 'contact-item';
+                div.onclick = () => startChat(user);
+                
+                div.innerHTML = `
+                    <div class="contact-avatar" style="background: ${getUserColor(user)}">
+                        ${firstLetter}
+                    </div>
+                    <div class="contact-info">
+                        <div class="contact-name">${escapeHtml(user.display_name || user.username)}</div>
+                        <div class="contact-status">
+                            <span class="status-text">${escapeHtml(user.role || 'User')}</span>
+                            ${isOnline ? '<span class="online-dot"></span>' : ''}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(div);
+            });
+        }
+
+        function renderChatsList(chatMap) {
+            const container = document.getElementById('chatsList');
+            if (!container) return;
+
+            if (chatMap.size === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 50px; color: #666;">
+                        <i class="fas fa-comments" style="font-size: 40px; margin-bottom: 15px; color: #ddd;"></i>
+                        <p>No conversations yet</p>
+                        <p style="font-size: 13px; margin-top: 8px;">Start chatting with contacts</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            Array.from(chatMap.entries()).forEach(([contactId, chat]) => {
+                const user = appState.users.find(u => u.id === contactId);
+                if (!user) return;
+
+                const isOnline = appState.onlineUsers.has(contactId);
+                const firstLetter = (user.display_name || user.username).charAt(0).toUpperCase();
+                const lastMsg = chat.lastMessage;
+                const time = formatTime(lastMsg.created_at);
+                const preview = lastMsg.message.length > 30 
+                    ? lastMsg.message.substring(0, 30) + '...' 
+                    : lastMsg.message;
+                const isFromMe = lastMsg.sender_id === appState.currentUser.id;
+                
+                const div = document.createElement('div');
+                div.className = `chat-card ${chat.unreadCount > 0 ? 'unread' : ''}`;
+                div.onclick = () => startChat(user);
+                
+                div.innerHTML = `
+                    <div class="chat-avatar" style="background: ${getUserColor(user)}">
+                        ${firstLetter}
+                    </div>
+                    <div class="chat-details">
+                        <div class="chat-header">
+                            <div class="chat-name">${escapeHtml(user.display_name || user.username)}</div>
+                            <div class="chat-time">${time}</div>
+                        </div>
+                        <div class="chat-preview">
+                            <div class="chat-message">${isFromMe ? 'You: ' : ''}${escapeHtml(preview)}</div>
+                            ${chat.unreadCount > 0 ? 
+                                `<div class="chat-badge">${chat.unreadCount}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(div);
+            });
+        }
+
+        function renderChatMessages() {
+            const container = document.getElementById('chatMessages');
+            if (!container || !appState.activeChat || !appState.messages[appState.activeChat.id]) {
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            let currentDate = '';
+            const messages = appState.messages[appState.activeChat.id];
+            
+            // Group messages by date for better performance
+            const messagesByDate = {};
+            messages.forEach(msg => {
+                const date = formatDate(msg.created_at);
+                if (!messagesByDate[date]) {
+                    messagesByDate[date] = [];
+                }
+                messagesByDate[date].push(msg);
+            });
+            
+            // Render grouped messages
+            Object.keys(messagesByDate).forEach(date => {
+                const dateDiv = document.createElement('div');
+                dateDiv.style.textAlign = 'center';
+                dateDiv.style.margin = '15px 0';
+                dateDiv.style.color = '#999';
+                dateDiv.style.fontSize = '12px';
+                dateDiv.style.fontWeight = '500';
+                dateDiv.textContent = date;
+                container.appendChild(dateDiv);
+                
+                messagesByDate[date].forEach(msg => {
+                    addMessageToChat(msg, false);
+                });
+            });
+
+            // Scroll to bottom with smooth animation
+            setTimeout(() => {
+                container.scrollTo({
+                    top: container.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
+        }
+
+        function addMessageToChat(message, isOptimistic) {
+            const container = document.getElementById('chatMessages');
+            if (!container) return;
+
+            // Remove placeholder if exists
+            const placeholder = container.querySelector('div[style*="text-align: center"]');
+            if (placeholder && container.children.length > 1) {
+                placeholder.remove();
+            }
+
+            const isSent = message.sender_id === appState.currentUser.id;
+            const time = formatTime(message.created_at);
+            
+            const groupDiv = document.createElement('div');
+            groupDiv.className = `message-group ${isSent ? 'sent' : 'received'}`;
+            if (isOptimistic) {
+                groupDiv.style.opacity = '0.7';
+            }
+            
+            groupDiv.innerHTML = `
+                <div class="message">
+                    ${escapeHtml(message.message)}
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            // Use requestAnimationFrame for smoother rendering
+            requestAnimationFrame(() => {
+                container.appendChild(groupDiv);
+                
+                // Scroll to bottom
+                requestAnimationFrame(() => {
+                    container.scrollTop = container.scrollHeight;
+                });
+            });
+        }
+
+        function startChat(user) {
+            // Android: Hide keyboard if open
+            document.activeElement?.blur();
+            
+            appState.activeChat = user;
+            
+            // Update UI
+            const firstLetter = (user.display_name || user.username).charAt(0).toUpperCase();
+            document.getElementById('chatUserAvatar').textContent = firstLetter;
+            document.getElementById('chatUserAvatar').style.background = getUserColor(user);
+            document.getElementById('chatUserName').textContent = user.display_name || user.username;
+            
+            const isOnline = appState.onlineUsers.has(user.id);
+            document.getElementById('chatUserStatus').textContent = isOnline ? 'Online' : 'Offline';
+            document.querySelector('.status-dot').style.display = isOnline ? 'block' : 'none';
+            
+            // Enable message input
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            
+            // Load messages
+            loadChatMessages(user.id);
+            
+            // Switch to chat page with transition
+            showPage('chatPage');
+            
+            // Android: Focus message input after delay
+            setTimeout(() => {
+                const messageInput = document.getElementById('messageInput');
+                if (messageInput) {
+                    messageInput.focus();
+                }
+            }, 300);
+        }
+
+        function updateStatistics() {
+            const chatCount = Object.keys(appState.messages).length;
+            const contactCount = appState.users.length;
+            const onlineCount = appState.onlineUsers.size;
+            
+            document.getElementById('chatsCount').textContent = chatCount;
+            document.getElementById('contactsCount').textContent = contactCount;
+            document.getElementById('onlineCount').textContent = onlineCount;
+        }
+
+        function updateOnlineStatusIndicators() {
+            // Update status indicators throughout the app
+            // This can be expanded to update specific elements as needed
+        }
+
+        // =========================================================================
+        // UTILITIES - Android Optimized
+        // =========================================================================
+        function getUserColor(user) {
+            if (!user || !user.username) return '#6a11cb';
+            
+            const colors = [
+                '#6a11cb', '#2575fc', '#ff6b6b', '#4ecdc4',
+                '#ffe66d', '#1a936f', '#ff9a76', '#8a4fff',
+                '#00bbf9', '#f15bb5'
+            ];
+            
+            // Simple hash function for consistent colors
+            let hash = 0;
+            for (let i = 0; i < user.username.length; i++) {
+                hash = user.username.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        function formatTime(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch {
+                return '--:--';
+            }
+        }
+
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 0) return 'Today';
+                if (diffDays === 1) return 'Yesterday';
+                if (diffDays < 7) return date.toLocaleDateString([], { weekday: 'long' });
+                
+                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            } catch {
+                return '';
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function adjustTextarea(textarea) {
+            // Reset height
+            textarea.style.height = 'auto';
+            
+            // Calculate new height (max 100px)
+            const newHeight = Math.min(textarea.scrollHeight, 100);
+            textarea.style.height = newHeight + 'px';
+            
+            // Adjust chat messages padding for Android keyboard
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                const basePadding = 100;
+                const additionalPadding = newHeight;
+                chatMessages.style.paddingBottom = (basePadding + additionalPadding) + 'px';
+                
+                // Scroll to bottom when typing
+                setTimeout(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 50);
+            }
+        }
+
+        function checkSendKey(event) {
+            // Android: Send on Enter (without Shift)
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+            
+            // Android: Adjust textarea on input
+            if (event.key !== 'Enter' || event.shiftKey) {
+                setTimeout(() => adjustTextarea(event.target), 0);
+            }
+        }
+
+        function playNotification() {
+            try {
+                const soundEnabled = localStorage.getItem('notificationSound') !== 'off';
+                if (soundEnabled) {
+                    const audio = document.getElementById('notificationAudio');
+                    if (audio) {
+                        // Reset and play
+                        audio.currentTime = 0;
+                        audio.play().catch(e => {
+                            console.warn('Failed to play notification sound:', e);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to play notification:', error);
+            }
+        }
+
+        function showMessageNotification(message) {
+            const sender = appState.users.find(u => u.id === message.sender_id);
+            if (sender) {
+                const preview = message.message.length > 35 
+                    ? message.message.substring(0, 35) + '...' 
+                    : message.message;
+                showToast(`New message from ${sender.display_name || sender.username}: ${preview}`, 'info');
+            }
+        }
+
+        function showAlert(element, message) {
+            if (!element) return;
+            element.textContent = message;
+            element.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            
+            // Remove existing toasts if too many
+            while (container.children.length > 3) {
+                container.removeChild(container.firstChild);
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${escapeHtml(message)}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Remove after 4 seconds with fade out
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => {
+                    if (toast.parentNode === container) {
+                        container.removeChild(toast);
+                    }
+                }, 300);
+            }, 4000);
+        }
+
+        function hideLoader() {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        function showError(message) {
+            showToast(message, 'error');
+        }
+
+        // =========================================================================
+        // NAVIGATION - Android Optimized
+        // =========================================================================
+        function showPage(pageId) {
+            // Hide all pages with transition
+            document.querySelectorAll('.page').forEach(page => {
+                if (page.classList.contains('active')) {
+                    page.style.opacity = '0';
+                    setTimeout(() => {
+                        page.classList.remove('active');
+                        page.style.opacity = '1';
+                    }, 50);
+                } else {
+                    page.classList.remove('active');
+                }
+            });
+            
+            // Show selected page
+            const page = document.getElementById(pageId);
+            if (page) {
+                page.classList.add('active');
+                page.style.opacity = '0';
+                setTimeout(() => {
+                    page.style.opacity = '1';
+                }, 50);
+            }
+            
+            // Update nav buttons
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (pageId === 'chatsPage') {
+                document.querySelectorAll('.nav-item')[0]?.classList.add('active');
+                // Android: Hide keyboard when switching to chats
+                document.activeElement?.blur();
+            } else if (pageId === 'contactsPage') {
+                document.querySelectorAll('.nav-item')[1]?.classList.add('active');
+            } else if (pageId === 'profilePage') {
+                document.querySelectorAll('.nav-item')[2]?.classList.add('active');
+            }
+            
+            // Reset search
+            if (pageId !== 'chatsPage') {
+                const search = document.getElementById('chatSearch');
+                if (search) {
+                    search.value = '';
+                    // Trigger search update
+                    const event = new Event('input');
+                    search.dispatchEvent(event);
+                }
+            }
+        }
+
+        function goBackToChats() {
+            showPage('chatsPage');
+            appState.activeChat = null;
+            
+            // Reset message input
+            const messageInput = document.getElementById('messageInput');
+            if (messageInput) {
+                messageInput.disabled = true;
+                messageInput.value = '';
+                adjustTextarea(messageInput);
+            }
+            
+            const sendBtn = document.getElementById('sendBtn');
+            if (sendBtn) {
+                sendBtn.disabled = true;
+            }
+            
+            // Android: Hide keyboard
+            document.activeElement?.blur();
+        }
+
+        function toggleDarkMode() {
+            const body = document.body;
+            const isDark = body.classList.contains('dark-mode');
+            
+            if (isDark) {
+                body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            }
+            
+            // Update settings dropdown
+            const themeSelect = document.getElementById('themeSelect');
+            if (themeSelect) {
+                themeSelect.value = isDark ? 'light' : 'dark';
+            }
+            
+            showToast(`${isDark ? 'Light' : 'Dark'} mode activated`, 'info');
+        }
+
+        // =========================================================================
+        // MODAL FUNCTIONS - Android Optimized
+        // =========================================================================
+        function showEditProfile() {
+            if (!appState.currentUser) return;
+            
+            document.getElementById('editDisplayName').value = appState.currentUser.display_name || '';
+            document.getElementById('editPhone').value = appState.currentUser.phone || '';
+            
+            showModal('editProfileModal');
+        }
+
+        function showSettings() {
+            showModal('settingsModal');
+        }
+
+        function showHelp() {
+            showModal('helpModal');
+        }
+
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('active');
+                // Android: Prevent background scrolling
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function hideModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('active');
+                // Android: Restore scrolling
+                document.body.style.overflow = '';
+            }
+        }
+
+        async function updateProfile() {
+            const displayName = document.getElementById('editDisplayName').value.trim();
+            const phone = document.getElementById('editPhone').value.trim();
+            
+            if (!displayName) {
+                showToast('Display name is required', 'error');
+                return;
+            }
+            
+            // Android: Hide keyboard
+            document.activeElement?.blur();
+            
+            try {
+                const { error } = await appState.supabase
+                    .from('users')
+                    .update({
+                        display_name: displayName,
+                        phone: phone
+                    })
+                    .eq('id', appState.currentUser.id);
+                
+                if (error) throw error;
+                
+                // Update local state
+                appState.currentUser.display_name = displayName;
+                appState.currentUser.phone = phone;
+                saveSession(appState.currentUser);
+                
+                // Update UI
+                updateUserInterface();
+                await loadAllUsers();
+                await loadUserChats();
+                
+                hideModal('editProfileModal');
+                showToast('Profile updated successfully', 'success');
+                
+            } catch (error) {
+                console.error('Failed to update profile:', error);
+                showToast('Update failed. Please try again.', 'error');
+            }
+        }
+
+        function saveSettings() {
+            const sound = document.getElementById('notificationSound').value;
+            const theme = document.getElementById('themeSelect').value;
+            
+            const settings = {
+                sound: sound,
+                theme: theme
+            };
+            
+            localStorage.setItem('quickchat_settings', JSON.stringify(settings));
+            localStorage.setItem('notificationSound', sound);
+            
+            // Apply theme
+            if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+            
+            localStorage.setItem('theme', theme);
+            
+            hideModal('settingsModal');
+            showToast('Settings saved', 'success');
+        }
+
+        function loadUserSettings() {
+            try {
+                // Load from localStorage
+                const savedSettings = localStorage.getItem('quickchat_settings');
+                if (savedSettings) {
+                    const settings = JSON.parse(savedSettings);
+                    const soundSelect = document.getElementById('notificationSound');
+                    const themeSelect = document.getElementById('themeSelect');
+                    
+                    if (soundSelect) soundSelect.value = settings.sound || 'on';
+                    if (themeSelect) themeSelect.value = settings.theme || 'light';
+                }
+                
+                // Load theme
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark' || (savedTheme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.body.classList.add('dark-mode');
+                }
+                
+                // Load notification sound setting
+                const notificationSound = localStorage.getItem('notificationSound');
+                const soundSelect = document.getElementById('notificationSound');
+                if (soundSelect && notificationSound) {
+                    soundSelect.value = notificationSound;
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+        }
+
+        // =========================================================================
+        // PWA FUNCTIONALITY - Android Optimized
+        // =========================================================================
+        function setupPWA() {
+            // Check if app is running in standalone mode
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                window.navigator.standalone === true;
+            
+            if (!isStandalone && !localStorage.getItem('installBannerHidden')) {
+                // Show install banner after delay
+                setTimeout(() => {
+                    const banner = document.getElementById('installBanner');
+                    if (banner) {
+                        banner.style.display = 'block';
+                        // Auto-hide after 10 seconds
+                        setTimeout(hideInstallBanner, 10000);
+                    }
+                }, 5000);
+            }
+            
+            // Listen for beforeinstallprompt event
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                appState.deferredPrompt = e;
+                
+                // Show install button
+                const banner = document.getElementById('installBanner');
+                if (banner) {
+                    banner.style.display = 'block';
+                }
+            });
+            
+            // Generate manifest dynamically
+            generateManifest();
+            
+            // Register service worker for offline support
+            registerServiceWorker();
+        }
+
+        function generateManifest() {
+            const manifest = {
+                "name": "QuickChat Messenger",
+                "short_name": "QuickChat",
+                "description": "Real-time messaging application",
+                "start_url": ".",
+                "display": "standalone",
+                "background_color": "#6a11cb",
+                "theme_color": "#6a11cb",
+                "orientation": "portrait",
+                "icons": [
+                    {
+                        "src": "https://img.icons8.com/color/96/000000/chat.png",
+                        "sizes": "96x96",
+                        "type": "image/png",
+                        "purpose": "any maskable"
+                    },
+                    {
+                        "src": "https://img.icons8.com/color/144/000000/chat.png",
+                        "sizes": "144x144",
+                        "type": "image/png"
+                    },
+                    {
+                        "src": "https://img.icons8.com/color/192/000000/chat.png",
+                        "sizes": "192x192",
+                        "type": "image/png"
+                    },
+                    {
+                        "src": "https://img.icons8.com/color/512/000000/chat.png",
+                        "sizes": "512x512",
+                        "type": "image/png"
+                    }
+                ]
+            };
+            
+            // Create link to manifest
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifest));
+            document.head.appendChild(link);
+        }
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').then(registration => {
+                        console.log('ServiceWorker registered:', registration.scope);
+                    }).catch(error => {
+                        console.log('ServiceWorker registration failed:', error);
+                    });
+                });
+            }
+        }
+
+        function installApp() {
+            if (appState.deferredPrompt) {
+                appState.deferredPrompt.prompt();
+                appState.deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                        showToast('Installing QuickChat...', 'success');
+                    }
+                    appState.deferredPrompt = null;
+                    hideInstallBanner();
+                });
+            } else {
+                showToast('Installation not available', 'error');
+            }
+        }
+
+        function hideInstallBanner() {
+            const banner = document.getElementById('installBanner');
+            if (banner) {
+                banner.style.display = 'none';
+            }
+            localStorage.setItem('installBannerHidden', 'true');
+        }
+
+        // =========================================================================
+        // CALL FUNCTIONS (PLACEHOLDER)
+        // =========================================================================
+        function startCall() {
+            if (!appState.activeChat) {
+                showToast('Select a contact to call', 'error');
+                return;
+            }
+            
+            showToast(`Calling ${appState.activeChat.display_name || appState.activeChat.username}...`, 'info');
+            // WebRTC implementation would go here
+        }
+
+        function showNotifications() {
+            showToast('No new notifications', 'info');
+        }
+
+        // =========================================================================
+        // LOGOUT FUNCTIONS - Android Optimized
+        // =========================================================================
+        function confirmLogout() {
+            showModal('logoutModal');
+        }
+
+        async function performLogout() {
+            try {
+                // Show loading
+                const logoutBtn = document.querySelector('#logoutModal .btn[onclick="performLogout()"]');
+                const originalText = logoutBtn.innerHTML;
+                logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging out...';
+                logoutBtn.disabled = true;
+
+                // Update user presence
+                if (appState.currentUser) {
+                    try {
+                        await appState.supabase
+                            .from('users')
+                            .update({
+                                last_seen: new Date().toISOString()
+                            })
+                            .eq('id', appState.currentUser.id);
+                    } catch (error) {
+                        console.warn('Failed to update last seen status:', error);
+                    }
+                }
+
+                // Stop polling intervals
+                if (appState.pollingInterval) {
+                    clearInterval(appState.pollingInterval);
+                    appState.pollingInterval = null;
+                }
+                
+                if (appState.connectionCheckInterval) {
+                    clearInterval(appState.connectionCheckInterval);
+                    appState.connectionCheckInterval = null;
+                }
+
+                // Remove realtime subscriptions
+                appState.subscriptions.forEach(sub => {
+                    try {
+                        appState.supabase.removeChannel(sub);
+                    } catch (error) {
+                        console.warn('Failed to remove subscription:', error);
+                    }
+                });
+                appState.subscriptions = [];
+
+                // Reset application state
+                appState.currentUser = null;
+                appState.activeChat = null;
+                appState.users = [];
+                appState.messages = {};
+                appState.onlineUsers.clear();
+                appState.isInitialized = false;
+
+                // Clear session storage
+                clearSession();
+
+                // Hide modal
+                hideModal('logoutModal');
+
+                // Show success message
+                showToast('Logged out successfully', 'success');
+
+                // Show auth screen after a short delay
+                setTimeout(() => {
+                    showAuthScreen();
+                    
+                    // Reset form
+                    showAuthForm('login');
+                    document.getElementById('loginUsername').value = '';
+                    document.getElementById('loginPassword').value = '';
+                }, 500);
+
+            } catch (error) {
+                console.error('Logout error:', error);
+                showToast('Logout failed. Please try again.', 'error');
+                
+                // Reset button state
+                const logoutBtn = document.querySelector('#logoutModal .btn[onclick="performLogout()"]');
+                if (logoutBtn) {
+                    logoutBtn.innerHTML = originalText;
+                    logoutBtn.disabled = false;
+                }
+            }
+        }
+
+        // =========================================================================
+        // INITIALIZATION COMPLETE
+        // =========================================================================
+        console.log('✅ QuickChat Messenger Android version ready');
+        
+        // Handle Android app state changes
+        document.addEventListener('pause', function() {
+            console.log('App paused');
+            if (appState.currentUser) {
+                updateUserPresence(false);
+            }
+        }, false);
+        
+        document.addEventListener('resume', function() {
+            console.log('App resumed');
+            if (appState.currentUser) {
+                updateUserPresence(true);
+                // Refresh data
+                setTimeout(() => {
+                    refreshOnlineUsers();
+                    loadUserChats();
+                }, 1000);
+            }
+        }, false);
+    </script>
+</body>
+</html>
